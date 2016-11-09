@@ -1,0 +1,81 @@
+docker-machine create -d virtualbox swmaster
+docker-machine create -d virtualbox swnode1
+
+docker $(docker-machine config swmaster) swarm init --listen-addr $(docker-machine ip swmaster):2377 --advertise-addr $(docker-machine ip swmaster)
+docker $(docker-machine config swnode1) swarm join --token $(docker $(docker-machine config swmaster) swarm join-token -q worker) $(docker-machine ip swmaster):2377
+
+eval $(docker-machine env swmaster)
+
+docker run -it -d -p 5000:5000 -e HOST=$(docker-machine ip swmaster) -e PORT=5000 -v /var/run/docker.sock:/var/run/docker.sock manomarks/visualizer
+
+#Abrir el navegador para ver el visualizador
+
+#concepto servicio y escalado
+
+docker service create --replicas 1 --name web nginx:latest
+
+
+docker service ls
+docker service inspect --pretty web
+docker service ps web
+
+docker service scale web=4
+
+docker-machine create -d virtualbox swnode2
+docker $(docker-machine config swnode2) swarm join --token $(docker $(docker-machine config swmaster) swarm join-token -q worker) $(docker-machine ip swmaster):2377
+
+
+
+#Concepto red de servicios y monitorización
+
+docker network create monitoring -d overlay
+
+docker service create --network=monitoring --mount type=volume,target=/usr/share/elasticsearch/data --constraint node.hostname==swnode1 --name elasticsearch elasticsearch:2.4.0
+
+docker service create --network=monitoring --name kibana -e ELASTICSEARCH_URL="http://elasticsearch:9200" -p 5601:5601 kibana:4.6.0
+
+
+docker service create --network=monitoring --mode global --name cadvisor --publish=9080:8080 \
+  --mount type=bind,source=/,target=/rootfs,readonly=true \
+  --mount type=bind,source=/var/run,target=/var/run,readonly=false \
+  --mount type=bind,source=/sys,target=/http://collabnix.com/archives/2001sys,readonly=true \
+  --mount type=bind,source=/var/lib/docker/,target=/var/lib/docker,readonly=true \
+  google/cadvisor:latest \
+  -storage_driver=elasticsearch \
+  -storage_driver_es_host="http://elasticsearch:9200"
+
+
+docker service create --name curl --network=monitoring --restart-condition none alpine-curl curl -XPUT http://elasticsearch:9200/.kibana/index-pattern/cadvisor -d '{"title" : "cadvisor*",  "timeFieldName": "container_stats.timestamp"}'
+
+
+#Hay que cargar en kibana  (kibana.json) la vista de ejemplo en settings --> objects --> import
+
+
+#concepto modo global
+
+docker-machine create -d virtualbox swnode3
+docker $(docker-machine config swnode3) swarm join --token $(docker $(docker-machine config swmaster) swarm join-token -q worker) $(docker-machine ip swmaster):2377
+
+#concepto actualizaciones de servicio (explicar opciones)
+
+docker service update --image nginx:1.10.1 web
+
+#concepto sacar un nodo (selfhealing)
+docker node update --availability drain swnode3
+docker node update --availability active swnode3
+
+#Concepto routing mesh (navegar a nodos que no tengan ese contenedor)
+
+docker service create --name web2 --replicas 8 --publish 8080:80 nginx
+docker service update --image almula/holababel web2
+
+
+docker node update --availability drain swnode3
+
+curl http://192.168.99.101:8080
+
+
+
+TODO:
+nfs: http://collabnix.com/archives/2001
+Aprovechar recursos de https://lostechies.com/gabrielschenker/2016/10/05/docker-and-swarm-mode-part-3/
