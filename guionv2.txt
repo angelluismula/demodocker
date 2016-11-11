@@ -1,6 +1,12 @@
 #Tareas preliminares: Crear cluster swarm y levantar el visualizer
 
-#Añadri 192.168.99.100:5000 al listado de registros inseguros
+#Paginas interesantes:
+
+http://imagelayers.io
+https://success.docker.com/Datacenter/Apply/Docker_Reference_Architecture%3A_Designing_Scalable,_Portable_Docker_Container_Networks
+
+
+#Añadir 192.168.99.100:5000 al listado de registros inseguros
 #Instalar docker experimental (tiene soporte de bundle)
 
 docker-machine create -d virtualbox \
@@ -64,8 +70,7 @@ docker-compose bundle --push-images
 
 #concepto servicio y escalado
 
-docker service create --replicas 1 --name web nginx:latest
-
+docker service create --replicas 1 --name web --publish 8080:80 nginx:latest
 
 docker service ls
 docker service inspect --pretty web
@@ -73,16 +78,12 @@ docker service ps web
 
 docker service scale web=4
 
-docker-machine create -d virtualbox swnode2
-docker $(docker-machine config swnode2) swarm join --token $(docker $(docker-machine config swmaster) swarm join-token -q worker) $(docker-machine ip swmaster):2377
-
-
 
 #Concepto red de servicios y monitorización
 
 docker network create monitoring -d overlay
 
-docker service create --network=monitoring --mount type=volume,target=/usr/share/elasticsearch/data --constraint node.hostname==swnode1 --name elasticsearch elasticsearch:2.4.0
+docker service create --network=monitoring --mount type=volume,target=/usr/share/elasticsearch/data --constraint node.hostname==swmaster --name elasticsearch elasticsearch:2.4.0
 
 docker service create --network=monitoring --name kibana -e ELASTICSEARCH_URL="http://elasticsearch:9200" -p 5601:5601 kibana:4.6.0
 
@@ -105,24 +106,26 @@ docker service create --name curl --network=monitoring --restart-condition none 
 
 #concepto modo global
 
-docker-machine create -d virtualbox swnode3
-docker $(docker-machine config swnode3) swarm join --token $(docker $(docker-machine config swmaster) swarm join-token -q worker) $(docker-machine ip swmaster):2377
+docker-machine create -d virtualbox \
+--virtualbox-boot2docker-url="https://github.com/boot2docker/boot2docker/releases/download/v1.12.3/boot2docker-experimental.iso" \
+--engine-insecure-registry 192.168.99.100:5000 \
+swnode2
+
+docker $(docker-machine config swnode2) swarm join --token $(docker $(docker-machine config swmaster) swarm join-token -q worker) $(docker-machine ip swmaster):2377
 
 #concepto actualizaciones de servicio (explicar opciones)
 
-docker service update --image nginx:1.10.1 web
+docker service update --image almula/holababel web2
 
 #concepto sacar un nodo (selfhealing)
-docker node update --availability drain swnode3
-docker node update --availability active swnode3
+docker node update --availability drain swnode1
+
 
 #Concepto routing mesh (navegar a nodos que no tengan ese contenedor)
 
-docker service create --name web2 --replicas 8 --publish 8080:80 nginx
-docker service update --image almula/holababel web2
 
 
-docker node update --availability drain swnode3
+docker node update --availability active swnode1
 
 curl http://192.168.99.101:8080
 
