@@ -160,7 +160,7 @@ curl http://192.168.99.102:8080
 
 #Montando el proyecto babelcoins
 
-export REGISTRY=192.168.99.100:5000/
+export REGISTRY=192.168.99.100:5000
 
 docker network create back -d overlay
 docker network create front -d overlay
