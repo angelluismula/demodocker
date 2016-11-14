@@ -1,4 +1,4 @@
-version: "2"
+version: "3"
 
 services:
   rng:
@@ -6,22 +6,39 @@ services:
     image: ${REGISTRY}rng${TAG}
     ports:
     - "8001:80"
+    networks:
+      - back
 
   hasher:
     build: hasher
     image: ${REGISTRY}hasher${TAG}
     ports:
     - "8002:80"
+    networks:
+      - back
 
   webui:
     build: webui
     image: ${REGISTRY}webui${TAG}
     ports:
     - "8000:80"
+    networks:
+      - front
 
   redis:
     image: redis
+    networks:
+      - front
+      - back
 
   worker:
     build: worker
     image: ${REGISTRY}worker${TAG}
+    networks:
+      - back
+
+networks:
+  front:
+    driver: overlay
+  back:
+    driver: overlay
