@@ -30,8 +30,6 @@ docker-machine create -d virtualbox \
 --engine-insecure-registry 192.168.99.100:5000 \
 swnode1
 
-#docker $(docker-machine config swmaster) swarm init --listen-addr $(docker-machine ip swmaster):2377 --advertise-addr $(docker-machine ip swmaster)
-#docker $(docker-machine config swnode1) swarm join --token $(docker $(docker-machine config swmaster) swarm join-token -q worker) $(docker-machine ip swmaster):2377
 
 docker-machine ssh swmaster docker swarm init --listen-addr $(docker-machine ip swmaster):2377 --advertise-addr $(docker-machine ip swmaster)
 docker-machine ssh swnode1 docker swarm join --token $(docker-machine ssh swmaster docker swarm join-token -q worker) $(docker-machine ip swmaster):2377
@@ -187,3 +185,9 @@ docker network inspect back
 docker deploy demodocker
 
 #Monitorización
+
+docker service create --network monitoring --name logstash -p 12201:12201/udp \
+logstash:2.4 -e "$(cat logstash.conf)"
+
+docker service update web \
+--log-driver gelf --log-opt gelf-address=udp://127.0.0.1:12201
