@@ -137,11 +137,10 @@ google/cadvisor:latest \
 #concepto modo global (levantar una maquina nueva con docker-machine)
 
 docker-machine create -d virtualbox \
---virtualbox-boot2docker-url="https://github.com/boot2docker/boot2docker/releases/download/v1.12.3/boot2docker-experimental.iso" \
 --engine-insecure-registry 192.168.99.100:5000 \
 swnode2
 
-docker $(docker-machine config swnode2) swarm join --token $(docker $(docker-machine config swmaster) swarm join-token -q worker) $(docker-machine ip swmaster):2377
+docker-machine ssh swnode2 docker swarm join --token $(docker-machine ssh swmaster docker swarm join-token -q worker) $(docker-machine ip swmaster):2377
 
 #concepto actualizaciones de servicio (explicar opciones)
 docker-compose
@@ -188,16 +187,3 @@ docker network inspect back
 docker deploy demodocker
 
 #Monitorización
---tlsverify
---tlscacert="/root/.docker/machine/certs/ca.pem"
---tlscert="/root/.docker/machine/certs/cert.pem"
---tlskey="/root/.docker/machine/certs/key.pem"
--H=tcp://192.168.99.100:2376
-
-
-
---tlsverify
---tlscacert="/root/.docker/machine/certs/ca.pem"
---tlscert="/root/.docker/machine/certs/cert.pem"
---tlskey="/root/.docker/machine/certs/key.pem"
--H=tcp://192.168.99.100:2376
