@@ -8,7 +8,7 @@ curl -L https://github.com/docker/compose/releases/download/1.9.0-rc4/docker-com
 chmod +x /usr/local/bin/docker-compose
 sudo curl -L git.io/scope -o /usr/local/bin/scope
 sudo chmod a+x /usr/local/bin/scope
-scope launch
+
 
 #Añadir 192.168.99.100:5000 al listado de registros inseguros
 systemctl show --property=FragmentPath docker
@@ -87,7 +87,7 @@ docker service create --name registry --publish 5000:5000 registry:2
 # mv docker-compose.yml-images docker-compose.yml
 
 export TAG=:v0.1
-export REGISTRY=192.168.99.100:5000/export REGISTRY=192.168.99.100:5000/
+export REGISTRY=192.168.99.100:5000/
 
 docker-compose build
 docker-compose push
@@ -142,7 +142,7 @@ docker-machine ssh swnode2 docker swarm join --token $(docker-machine ssh swmast
 
 #concepto actualizaciones de servicio (explicar opciones)
 docker-compose
-docker service update --image almula/holababel web
+docker service update --image almula/holababel:php-fpm web
 
 #concepto selfhealing (contralado / caida y recuperación)
 
